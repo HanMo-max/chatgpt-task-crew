@@ -12,6 +12,9 @@
 # For a personal/global setup, merge the same settings into:
 #   ~/.codex/config.toml
 
+# Root / orchestrator: Astra or GPT-6.1 Sol, selected by the user.
+# For a Sol root, set model = "gpt-6.1-sol" and keep high effort.
+# For standalone simple tasks, select gpt-6-luna in a separate session.
 # Root / orchestrator
 model = "gpt-6-astra"
 model_reasoning_effort = "high"

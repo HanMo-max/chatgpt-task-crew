@@ -27,14 +27,16 @@
 
 Finder 默认隐藏以点开头的目录，使用 `Command + Shift + .` 显示 `.codex` 和 `.agents`。
 
-主控默认 `gpt-6-astra` / `high`；普通子 Agent 默认 `gpt-6-luna` / `medium`；reviewer 为 Astra / `low`。
+主控默认 `gpt-6-astra` / `high`，也支持 `gpt-6.1-sol` / `high`；普通子 Agent 默认 `gpt-6-luna` / `medium`；reviewer 为 Astra / `low`。
+如果需要 GPT-6.1 Sol 主控，在模型选择器选择它，或将项目配置顶层的 `model` 改为 `"gpt-6.1-sol"`，保持 `model_reasoning_effort = "high"`。独立简单任务直接选择 `gpt-6-luna`，常规子代理继续使用 Luna medium。
+
 模板保留现行源项目的 6 个子线程上限，未做性能最优性测试。
 运行时可能提供更少名额；实际并发以当前会话为准。
 
 `approval_policy` 和 `sandbox_mode` 也要与原项目配置合并；角色文件不是绕过父会话权限的入口。
 父会话的实时权限覆盖可能优先于角色默认值。尤其 tester 虽允许测试产物写入，默认不允许修改源码。
 
-现行 Skill 原文包含委派门槛和 Astra/Sol 主控的双支路升级协议，请在合并前阅读。主控是 Astra 时，Luna → Sol high 的新增升级遵守其中的用户授权要求；主控是 Sol 时由主控接管受阻部分。现行支路未显式定义 `gpt-6.1-sol` 等其他主模型，不能仅凭相似名称宣称升级支路已验证。
+发布 Skill 保留现行委派门槛，并将 Astra/Sol 双支路中的旧 Sol 更新为 GPT-6.1 Sol。主控是 Astra 时，Luna → GPT-6.1 Sol high 的新增升级遵守现有用户授权要求；主控是 GPT-6.1 Sol 时由主控接管受阻部分，不重复派发同模型子代理。该更新属于规则修改，不能替代安装后的运行验证。
 不同客户端的子 Agent 工具 schema 可能有上下文继承限制；显式覆盖模型时，先检查是否需要使用 `fork_turns="none"` 或有限历史，不能用旧示例越过当前工具约束。
 
 ## 生效验证

@@ -3,10 +3,10 @@
 将本段合并到已有项目 `AGENTS.md`，保留原项目职责和约束。
 
 多文件工程、跨模块改动、需要先探索再实现、或实现与验证需分离时，按 `astra-orchestrator` Skill 的现行门槛实际派发子 Agent。
-默认由 Astra 主控；用户选择 Sol 主控时同样适用分工规则。常规执行角色固定 Luna medium，独立 reviewer 为 Astra low。
+默认由 Astra 主控；用户选择 GPT-6.1 Sol 主控时同样适用分工规则。常规执行角色固定 Luna medium，独立 reviewer 为 Astra low。
 主 Agent 负责方向、拆解、共享状态、集成和最终验收。
 真正独立的工作流可以并行；同一文件保持单一写入者，依赖任务按顺序执行。
 琐碎操作由当前 Agent 直接处理；独立简单任务可在新会话直接选择 Luna。
 每次委派简要说明角色、实际请求模型、任务边界和验收标准；不得把配置声明当成实际运行证据。
-Luna 遇到推理阻塞时按 Skill 双支路执行：Astra 主控经用户授权可派发 Sol high；Sol 主控直接补上下文或接管受阻部分，不另起 Sol 子 Agent。
+Luna 遇到推理阻塞时按 Skill 双支路执行：Astra 主控经用户授权可派发 GPT-6.1 Sol high；GPT-6.1 Sol 主控直接补上下文或接管受阻部分，不另起 GPT-6.1 Sol 子 Agent。
 用户当前明确指令优先；此规则不授予额外业务权限，也不覆盖原项目的职责边界。

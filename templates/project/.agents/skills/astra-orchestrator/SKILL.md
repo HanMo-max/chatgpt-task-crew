@@ -1,6 +1,6 @@
 ---
 name: astra-orchestrator
-description: Orchestrate Codex coding work with the root agent as planner/integrator, GPT-6 Luna subagents for exploration, implementation, testing, and research, and an Astra reviewer. Applies whether the root is GPT-6 Astra or GPT-6 Sol. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
+description: Orchestrate Codex coding work with the root agent as planner/integrator, GPT-6 Luna subagents for exploration, implementation, testing, and research, and an Astra reviewer. Applies whether the root is GPT-6 Astra or GPT-6.1 Sol. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
 ---
 
 # Astra Orchestrator
@@ -13,9 +13,13 @@ Use the root agent as the high-quality orchestrator.
 
 Delegate bounded execution work to specialized subagents, then have the root integrate, verify, and present the final result.
 
+Standalone simple tasks use GPT-6 Luna directly. For coordinated work, the root
+may be GPT-6 Astra or GPT-6.1 Sol, as selected by the user. This skill does not
+switch an already running root session automatically.
+
 The expected default topology is:
 
-- root: GPT-6 Astra or GPT-6 Sol (whichever model the user selected for the session)
+- root: GPT-6 Astra or GPT-6.1 Sol (whichever model the user selected for the session)
 - explorer: GPT-6 Luna
 - worker: GPT-6 Luna
 - tester: GPT-6 Luna
@@ -29,7 +33,7 @@ This is a requirement, not a preference.
 Only the reviewer uses Astra by default.
 
 These orchestration rules are root-model agnostic: they apply the same way when the
-root is GPT-6 Astra and when the root is GPT-6 Sol. Running the session on GPT-6 Sol
+root is GPT-6 Astra and when the root is GPT-6.1 Sol. Running the session on GPT-6.1 Sol
 does not relax the delegation gate, does not move routine execution into the root
 thread, and does not change the subagent models. The only rule that depends on the
 root model is the escalation target (see "Model escalation protocol").
@@ -47,7 +51,7 @@ Before doing substantive repository work, classify the task as either:
 
 Use root-only only when the task is genuinely small, localized, and does not materially benefit from independent exploration, implementation, testing, research, or review.
 
-The gate does not depend on which model is the root. When the root is GPT-6 Sol, the
+The gate does not depend on which model is the root. When the root is GPT-6.1 Sol, the
 same gate applies: qualifying work must be delegated to GPT-6 Luna subagents rather
 than performed in the root thread. A stronger root model is not a reason to skip
 delegation.
@@ -114,7 +118,7 @@ When spawning agents, use these models by default:
 - researcher: `gpt-6-luna`
 - reviewer: `gpt-6-astra`
 
-The root remains whatever the user selected: `gpt-6-astra` or `gpt-6-sol`.
+The root remains whatever the user selected: `gpt-6-astra` or `gpt-6.1-sol`.
 
 Never spawn a subagent on the root's own model in order to "escalate" — see the
 escalation protocol for what the escalation target is under each root model.
@@ -361,32 +365,32 @@ GPT-6 Luna should not independently escalate itself to a more expensive model.
 
 The root owns model escalation decisions.
 
-### Model escalation protocol (GPT-6 Sol upgrade)
+### Model escalation protocol (GPT-6.1 Sol upgrade)
 
 The escalation target depends on the root model. Check the root model first — it
 decides which of the two branches below applies.
 
-**Branch A — root = GPT-6 Astra.** The escalation target is a `gpt-6-sol` subagent.
+**Branch A — root = GPT-6 Astra.** The escalation target is a `gpt-6.1-sol` subagent.
 When a GPT-6 Luna subagent reports a reasoning blocker, follow this exact protocol
 and narrate every step in the conversation:
 
 1. **Announce the escalation request** in the conversation:
-   > ⬆️ [升级申请] `worker`（GPT-6 Luna）在 <任务名> 中遇到 <一句话原因>，申请升级到 GPT-6 Sol high。
+   > ⬆️ [升级申请] `worker`（GPT-6 Luna）在 <任务名> 中遇到 <一句话原因>，申请升级到 GPT-6.1 Sol high。
 2. **Assess** whether the blocker genuinely needs stronger reasoning, or whether
    the root can resolve it by narrowing the task, providing context, or deciding
    the architecture itself. Prefer the cheaper fix when it is reasonable.
-3. **Ask the user for approval** before spawning any GPT-6 Sol agent. Do not escalate
+3. **Ask the user for approval** before spawning any GPT-6.1 Sol agent. Do not escalate
    on the root's own authority. If the user pre-authorized escalation in the
    current task ("可以升级" or similar), cite that authorization instead of
    asking again for later same-type escalations within the same task.
 4. **On approval**, respawn the bounded task as a subagent with
-   `model = "gpt-6-sol"`, `model_reasoning_effort = "high"`, and narrate:
-   > ⬆️ [已升级] <任务名> → GPT-6 Sol high（用户已确认）
+   `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"`, and narrate:
+   > ⬆️ [已升级] <任务名> → GPT-6.1 Sol high（用户已确认）
 5. **On rejection or cheaper resolution**, narrate:
    > ⬇️ [保持 GPT-6 Luna] <任务名> 维持 GPT-6 Luna（原因：<缩小范围/补上下文/root 亲自决策>）
 
-**Branch B — root = GPT-6 Sol.** The root is already the escalation target, so
-there is nothing to escalate to. Do not spawn a `gpt-6-sol` subagent for this
+**Branch B — root = GPT-6.1 Sol.** The root is already the escalation target, so
+there is nothing to escalate to. Do not spawn a `gpt-6.1-sol` subagent for this
 purpose and do not raise a ⬆️ 升级申请 or wait for approval — the stronger
 reasoning is already in the root thread. Assess the blocker the same way:
 
@@ -395,7 +399,7 @@ reasoning is already in the root thread. Assess the blocker the same way:
    > ⬇️ [保持 GPT-6 Luna] <任务名> 维持 GPT-6 Luna（原因：<缩小范围/补上下文/root 亲自决策>）
 2. If stronger reasoning is genuinely needed, the root takes the task over in its
    own thread and narrates:
-   > ⬆️ [接管] <任务名> → root（GPT-6 Sol high）：<一句话原因>
+   > ⬆️ [接管] <任务名> → root（GPT-6.1 Sol high）：<一句话原因>
 
 The takeover is bounded to the blocked task: the root keeps its existing
 responsibilities, does not become the default executor for other delegated work,
@@ -469,12 +473,12 @@ conversation at spawn time, using this compact format:
 > 🤖 [委派] worker ← GPT-6 Luna（medium）：实现 <目标>，拥有 <文件>
 > 🤖 [委派] tester ← GPT-6 Luna（medium）：验证 <验收标准>
 > 🤖 [委派] reviewer ← Astra（low）：独立审查本次改动
-> ⬆️ [已升级] <任务名> → GPT-6 Sol high（用户已确认）  ← 仅当 root = GPT-6 Astra 时出现
-> ⬆️ [接管] <任务名> → root（GPT-6 Sol high）：<一句话原因>  ← 仅当 root = GPT-6 Sol 时出现
+> ⬆️ [已升级] <任务名> → GPT-6.1 Sol high（用户已确认）  ← 仅当 root = GPT-6 Astra 时出现
+> ⬆️ [接管] <任务名> → root（GPT-6.1 Sol high）：<一句话原因>  ← 仅当 root = GPT-6.1 Sol 时出现
 
 And at completion:
 
-> ✅ [完成] <任务名>（GPT-6 Luna/Astra/GPT-6 Sol high）：<一句话结果>
+> ✅ [完成] <任务名>（GPT-6 Luna/Astra/GPT-6.1 Sol high）：<一句话结果>
 
 Every spawn must state the role and the exact model. Do not summarize away the
 model assignments. Do not claim a GPT-6 Luna agent was used unless the trace contains
