@@ -1,0 +1,13 @@
+# Project-scoped defaults. Merge with existing settings before installation.
+# The live model selector and runtime overrides may change the effective model.
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[agents]
+enabled = true
+# Child agents only; the client or runtime may impose a lower limit.
+max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "medium"
