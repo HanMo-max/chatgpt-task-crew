@@ -1,0 +1,34 @@
+{
+  "observed_at": "2026-10-08",
+  "source": "Current local project deployment; original private project paths and business documents excluded.",
+  "files": [
+    {
+      "path": "templates/project/.codex/config.toml",
+      "sha256": "984d8cbe167d6daef0e0c173286cf409202f3051ea91f143585dc64c29e05ca4"
+    },
+    {
+      "path": "templates/project/.agents/skills/astra-orchestrator/SKILL.md",
+      "sha256": "a183d6c537672d4524d94a92c611c29dc9e015fc63e5b57a53e10342a2dd7a47"
+    },
+    {
+      "path": "templates/project/.codex/agents/explorer.toml",
+      "sha256": "4a1df3ede67fe38d755db86ccae8ad0a44b367d446b79aa5af5974460236a7c7"
+    },
+    {
+      "path": "templates/project/.codex/agents/worker.toml",
+      "sha256": "d726e286187e82e74cffd114e3986602f2a31fa05e75f646dccebc49860aeda9"
+    },
+    {
+      "path": "templates/project/.codex/agents/tester.toml",
+      "sha256": "cbb51ee04780c9399008a7b120cc5d28e00910aef6a48c8271c39e99723998b9"
+    },
+    {
+      "path": "templates/project/.codex/agents/researcher.toml",
+      "sha256": "ddf56f21e0877361cf9fe2ccacd072d5f1d4e38ad25953915042c00f3ff40e07"
+    },
+    {
+      "path": "templates/project/.codex/agents/reviewer.toml",
+      "sha256": "9964bb2801d0279d7f54cddcc5c0c8eaf749cb47b390d9743f434f2cd5be4908"
+    }
+  ]
+}

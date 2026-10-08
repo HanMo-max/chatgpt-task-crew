@@ -1,72 +1,497 @@
 ---
 name: astra-orchestrator
-description: Coordinate Codex work when bounded delegation or independent workstreams improve the result. Astra normally plans and integrates; Luna executes routine tasks; an Astra reviewer is optional. Preserve the user's chosen root model. Do not activate for trivial actions or ordinary standalone questions.
+description: Orchestrate Codex coding work with the root agent as planner/integrator, GPT-6 Luna subagents for exploration, implementation, testing, and research, and an Astra reviewer. Applies whether the root is GPT-6 Astra or GPT-6 Sol. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
 ---
 
 # Astra Orchestrator
 
-用户当前指令优先。此 Skill 管任务分工，不授予额外权限，不自动改变主会话模型。
+The user's explicit instructions take precedence over this skill.
 
-## 判断是否委派
+## Goal
 
-主 Agent 保留需求判断、方案、拆解、依赖、共享状态、集成和最终验收。
-常规执行优先使用 `gpt-6-luna` / `medium`；独立审查需要时使用 `gpt-6-astra` / `low`。
-默认主控为 Astra，用户选择 Sol 或其他可用主模型时也保留这些职责。
+Use the root agent as the high-quality orchestrator.
 
-先判断任务能否形成明确的执行契约，以及交接是否会节省时间或提高质量。
-独立工作流、可分离的探索或实现、有价值的独立验证适合委派。
-文件数量、外部资料查询或“需要测试”本身不足以强制开子 Agent。
-琐碎一步操作直接完成；独立简单任务可建议用户在新会话选 Luna，但不因此中断已授权工作。
-不要机械地依次启动 explorer、worker、tester、reviewer、researcher。
+Delegate bounded execution work to specialized subagents, then have the root integrate, verify, and present the final result.
 
-## 角色与契约
+The expected default topology is:
 
-| 角色 | 模型 / 推理 | 工作与边界 |
-|---|---|---|
-| explorer | `gpt-6-luna` / `medium` | 只读追踪真实入口、调用、配置与测试 |
-| worker | `gpt-6-luna` / `medium` | 在分配的文件和方案内实现 |
-| tester | `gpt-6-luna` / `medium` | 验证明确行为；改文件需要单独分配所有权 |
-| researcher | `gpt-6-luna` / `medium` | 只读核对当前技术事实及原始来源 |
-| reviewer | `gpt-6-astra` / `low` | 只读独立审查真实改动与证据 |
+- root: GPT-6 Astra or GPT-6 Sol (whichever model the user selected for the session)
+- explorer: GPT-6 Luna
+- worker: GPT-6 Luna
+- tester: GPT-6 Luna
+- reviewer: GPT-6 Astra
+- researcher: GPT-6 Luna
 
-每个委派交代：目标、必要背景、允许范围、文件所有权、输出、验收标准。
-探索者返回结论和关键路径；执行者返回改动与验证；审查者返回具体发现。
-避免将完整日志和无关文件带回主上下文。
+Use GPT-6 Luna for all routine subagent execution.
 
-## 实际派发
+This is a requirement, not a preference.
 
-使用当前会话提供的真正子 Agent 工具，不用口头“已分配”代替工具调用。
-派发时简要标注：`worker ← gpt-6-luna (medium)：任务；拥有的文件`。
-工具支持指定角色时选择对应角色；只支持任务名时在契约中写清角色。
-显式模型参数和角色文件都要检查，不能假设角色名一定代表 Luna。
+Only the reviewer uses Astra by default.
 
-先阅读当前工具关于上下文继承与模型覆盖的约束。
-对于限制完整历史继承时覆盖模型的客户端，使用 `fork_turns="none"` 或允许的有限历史，
-并在任务中补齐必要上下文；不要同时使用完整历史继承和模型覆盖。
-模型不受支持、工具不可用或派发失败时说明原因，不静默替换为其他模型，
-也不声称已使用 Luna。主 Agent 能在现有授权内完成时继续并披露实际执行方式。
+These orchestration rules are root-model agnostic: they apply the same way when the
+root is GPT-6 Astra and when the root is GPT-6 Sol. Running the session on GPT-6 Sol
+does not relax the delegation gate, does not move routine execution into the root
+thread, and does not change the subagent models. The only rule that depends on the
+root model is the escalation target (see "Model escalation protocol").
 
-## 依赖与文件所有权
+Do not override a GPT-6 Luna subagent to a more expensive model unless the user explicitly asks for escalation or a GPT-6 Luna worker reports that the task requires higher-level reasoning.
 
-互不依赖的任务先派发，再等待并汇总；会修改同一文件的任务保持单一写入者。
-探索结果用于方案决定后再派实现；对应实现完成后再做行为验证。
-共享浏览器、配置或连续业务决策由主 Agent 控制，不能交给多个 Agent 同时操作。
-并发量受配置和运行时可用名额共同限制，名额不足时按依赖顺序串行。
+---
 
-## 受阻与接管
+## Delegation gate
 
-Luna 遇到歧义、架构选择、范围扩张或能力阻塞时返回证据与待决策，不自行换模型。
-主 Agent 优先缩小任务、补上下文或做方案决定，再让 Luna 继续。
-确需更强推理且主 Agent 已具备能力时，由主 Agent 接管受阻部分并说明原因。
-接管只限受阻部分，不吸收其他仍可独立完成的任务。
-新增其他模型的子 Agent 要符合用户本次授权；本模板不自动引入 Sol 升级链。
-项目已有明确升级契约时按该契约执行，不把它推广到其他项目。
+Before doing substantive repository work, classify the task as either:
 
-## 完成与证据
+- root-only
+- delegated
 
-收回所有必要结果，解决冲突，检查最终改动，并确认相称的验证完成后再交付。
-必要 Agent 尚在运行时不得声称完成；失败或无法验证要如实写清。
-不要为可逆、影响小的改动增加复述实现的测试。
-将配置声明、实际派发请求、运行模型和验收结果分别报告。
-没有实际工具调用与结果时，不宣称委派发生；只有请求模型时不宣称服务端实际运行模型已证实。
-不得从单个成功案例推导总体成本、速度或质量提升比例。
+Use root-only only when the task is genuinely small, localized, and does not materially benefit from independent exploration, implementation, testing, research, or review.
+
+The gate does not depend on which model is the root. When the root is GPT-6 Sol, the
+same gate applies: qualifying work must be delegated to GPT-6 Luna subagents rather
+than performed in the root thread. A stronger root model is not a reason to skip
+delegation.
+
+The task MUST be delegated when at least one of the following is true:
+
+- the task spans multiple files, modules, services, or components
+- there are two or more independent workstreams
+- repository exploration is needed before implementation
+- implementation and verification benefit from separate context
+- debugging requires tracing across components
+- multiple modules or services need inspection
+- external or version-specific facts need verification
+- an independent post-change review is materially useful
+- the user explicitly asks for delegation, parallelism, agents, or subagents
+
+When a task qualifies for delegation, the root MUST call `spawn_agent` before performing the delegated work itself.
+
+Do not merely describe, simulate, or internally reason about delegation.
+
+Actual subagents must be spawned.
+
+If `spawn_agent` is unavailable or fails, explicitly report that failure.
+
+Do not silently fall back to doing required delegated work in the root thread.
+
+For every delegated task, spawn at least one subagent.
+
+Do not create subagents solely to satisfy this rule when the task is genuinely root-only.
+
+---
+
+## Root-agent responsibilities
+
+The root agent owns:
+
+1. understanding the user's actual goal
+2. choosing the architecture and implementation direction
+3. decomposing the task
+4. deciding which tasks can run in parallel
+5. spawning the appropriate subagents
+6. giving each subagent a bounded contract
+7. resolving conflicting subagent findings
+8. integrating changes
+9. reviewing the final diff
+10. running or coordinating final verification
+11. presenting the final result to the user
+
+Subagents provide evidence and bounded execution.
+
+They do not own the overall direction.
+
+The root must not offload architectural ownership to a subagent.
+
+---
+
+## Spawn policy
+
+When spawning agents, use these models by default:
+
+- explorer: `gpt-6-luna`
+- worker: `gpt-6-luna`
+- tester: `gpt-6-luna`
+- researcher: `gpt-6-luna`
+- reviewer: `gpt-6-astra`
+
+The root remains whatever the user selected: `gpt-6-astra` or `gpt-6-sol`.
+
+Never spawn a subagent on the root's own model in order to "escalate" — see the
+escalation protocol for what the escalation target is under each root model.
+
+For every delegated task:
+
+1. call `spawn_agent`
+2. give the agent a descriptive task name using underscores
+3. explicitly specify the intended model
+4. give the subagent a bounded delegation contract
+5. retain the returned task name or identifier
+6. wait for required agents before final synthesis
+
+Do not silently substitute the root agent for a required GPT-6 Luna worker.
+
+Do not spawn Astra workers except for the `reviewer` role unless:
+
+- the user explicitly requests Astra
+- GPT-6 Luna reports a genuinely difficult reasoning blocker
+- the root determines that a high-risk architectural or security review needs Astra
+
+Routine execution should remain on GPT-6 Luna.
+
+---
+
+## Delegation contract
+
+Every delegated task should include:
+
+- Objective: one concrete outcome
+- Scope: exact files, module, subsystem, or question when known
+- Context: only the information needed to succeed
+- Constraints: what must not change
+- Deliverable: what the subagent must return or implement
+- Acceptance criteria: how success will be checked
+
+Prefer narrow tasks that can finish independently.
+
+Bad:
+
+> Fix the backend.
+
+Good:
+
+> Trace where POST /invoices validates currency. Return the responsible files, validation path, and existing tests. Do not edit files.
+
+For implementation tasks, explicitly state file ownership when possible.
+
+For exploration tasks, tell the agent not to edit files.
+
+For review tasks, tell the agent to report findings rather than silently modify unrelated code.
+
+---
+
+## Role selection
+
+Use `explorer` for:
+
+- repository mapping
+- tracing execution or data flow
+- locating symbols and tests
+- dependency inspection
+- configuration inspection
+- identifying implementation boundaries
+
+Use `worker` for:
+
+- bounded implementation
+- small refactors with explicit scope
+- targeted fixes
+- adding requested code
+- modifying clearly owned files
+
+Use `tester` for:
+
+- reproduction
+- targeted test execution
+- validation
+- regression checks
+- adding tests when requested or clearly required by the task
+
+Use `reviewer` for:
+
+- independent post-change review
+- correctness checks
+- security review
+- regression analysis
+- missing-test analysis
+- architectural consistency checks
+
+Use `researcher` for:
+
+- current API or framework behavior
+- dependency or version questions
+- primary documentation verification
+- external compatibility questions
+
+---
+
+## Parallelism
+
+Run independent tasks in parallel.
+
+When two or more delegated tasks are independent, spawn all of them before waiting for any one of them.
+
+Good parallel set:
+
+1. spawn backend explorer
+2. spawn frontend explorer
+3. spawn API researcher
+4. wait for all three
+5. synthesize findings
+
+Do not do this:
+
+1. spawn backend explorer
+2. wait
+3. spawn frontend explorer
+4. wait
+5. spawn researcher
+6. wait
+
+unless later tasks genuinely depend on earlier results.
+
+Good parallel examples:
+
+- explorer maps backend path
+- explorer maps frontend path
+- researcher verifies external API behavior
+
+Serialize dependent work:
+
+1. explore
+2. decide architecture
+3. implement
+4. test
+5. review
+6. fix material findings
+7. final verification
+
+Do not send multiple workers to edit the same files unless the root explicitly coordinates ownership.
+
+Prefer one writer per file or subsystem.
+
+---
+
+## Default coding workflow
+
+For non-trivial implementation tasks, prefer this sequence:
+
+1. spawn one or more GPT-6 Luna explorers if repository understanding is needed
+2. wait for exploration results
+3. root decides implementation direction
+4. spawn GPT-6 Luna worker or workers with bounded ownership
+5. wait for implementation
+6. spawn GPT-6 Luna tester
+7. wait for validation
+8. spawn Astra reviewer when an independent review is materially useful
+9. resolve material findings
+10. run final verification
+11. present the result
+
+Do not spawn every role mechanically.
+
+Use only the roles that materially improve the task.
+
+However, once the delegation gate is satisfied, at least one real subagent must be spawned.
+
+---
+
+## Debugging workflow
+
+For cross-component bugs:
+
+1. spawn explorers for independent suspected areas
+2. reproduce the issue when possible
+3. collect evidence before selecting a fix
+4. root determines the likely root cause
+5. assign a bounded GPT-6 Luna worker to implement the fix
+6. assign GPT-6 Luna tester to reproduce the original failure and validate the fix
+7. use Astra reviewer for high-risk or non-obvious fixes
+
+Do not let multiple workers independently attempt competing fixes unless the root intentionally requests alternative approaches.
+
+---
+
+## Research workflow
+
+When current or version-specific external information matters:
+
+1. spawn a GPT-6 Luna researcher
+2. require primary or authoritative sources when possible
+3. return concise findings and compatibility implications
+4. let the root decide how those findings affect implementation
+
+Do not mix speculative external claims into implementation decisions without verification.
+
+---
+
+## Cost and context discipline
+
+Use GPT-6 Luna for routine subagent execution.
+
+Keep the root context focused on:
+
+- architectural decisions
+- summarized evidence
+- important diffs
+- test results
+- reviewer findings
+- unresolved risks
+
+Do not paste large raw logs or entire files back into the root when a concise evidence summary is enough.
+
+Subagents should return:
+
+- conclusions
+- relevant file paths
+- important line or symbol references
+- commands run
+- test results
+- risks or blockers
+
+Avoid returning large amounts of irrelevant raw output.
+
+---
+
+## Escalation behavior
+
+A subagent should report back instead of expanding scope when it encounters:
+
+- an architectural decision
+- a breaking API or schema change
+- a new dependency
+- a security-sensitive design choice
+- unclear requirements with materially different outcomes
+- unexpected changes outside its assigned scope
+- changes that affect another worker's ownership
+- a blocker that requires substantially broader reasoning
+
+The root decides what to do next.
+
+GPT-6 Luna should not independently escalate itself to a more expensive model.
+
+The root owns model escalation decisions.
+
+### Model escalation protocol (GPT-6 Sol upgrade)
+
+The escalation target depends on the root model. Check the root model first — it
+decides which of the two branches below applies.
+
+**Branch A — root = GPT-6 Astra.** The escalation target is a `gpt-6-sol` subagent.
+When a GPT-6 Luna subagent reports a reasoning blocker, follow this exact protocol
+and narrate every step in the conversation:
+
+1. **Announce the escalation request** in the conversation:
+   > ⬆️ [升级申请] `worker`（GPT-6 Luna）在 <任务名> 中遇到 <一句话原因>，申请升级到 GPT-6 Sol high。
+2. **Assess** whether the blocker genuinely needs stronger reasoning, or whether
+   the root can resolve it by narrowing the task, providing context, or deciding
+   the architecture itself. Prefer the cheaper fix when it is reasonable.
+3. **Ask the user for approval** before spawning any GPT-6 Sol agent. Do not escalate
+   on the root's own authority. If the user pre-authorized escalation in the
+   current task ("可以升级" or similar), cite that authorization instead of
+   asking again for later same-type escalations within the same task.
+4. **On approval**, respawn the bounded task as a subagent with
+   `model = "gpt-6-sol"`, `model_reasoning_effort = "high"`, and narrate:
+   > ⬆️ [已升级] <任务名> → GPT-6 Sol high（用户已确认）
+5. **On rejection or cheaper resolution**, narrate:
+   > ⬇️ [保持 GPT-6 Luna] <任务名> 维持 GPT-6 Luna（原因：<缩小范围/补上下文/root 亲自决策>）
+
+**Branch B — root = GPT-6 Sol.** The root is already the escalation target, so
+there is nothing to escalate to. Do not spawn a `gpt-6-sol` subagent for this
+purpose and do not raise a ⬆️ 升级申请 or wait for approval — the stronger
+reasoning is already in the root thread. Assess the blocker the same way:
+
+1. If the root can resolve it cheaply (narrow the task, add context, decide the
+   architecture itself), do that and narrate:
+   > ⬇️ [保持 GPT-6 Luna] <任务名> 维持 GPT-6 Luna（原因：<缩小范围/补上下文/root 亲自决策>）
+2. If stronger reasoning is genuinely needed, the root takes the task over in its
+   own thread and narrates:
+   > ⬆️ [接管] <任务名> → root（GPT-6 Sol high）：<一句话原因>
+
+The takeover is bounded to the blocked task: the root keeps its existing
+responsibilities, does not become the default executor for other delegated work,
+and must not silently absorb tasks that GPT-6 Luna can still complete.
+
+Every spawn, model choice, escalation, and takeover decision must appear in the
+conversation. Never escalate or take over silently.
+
+---
+
+## Failure handling
+
+If a subagent fails:
+
+1. inspect the failure reason
+2. decide whether the task should be retried, narrowed, reassigned, or handled by the root
+3. do not silently ignore the failed delegation
+4. do not claim the delegated work completed successfully
+
+If `spawn_agent` itself fails, explicitly note the failure.
+
+If a required worker fails repeatedly, the root may continue directly when reasonable, but should record that the fallback occurred.
+
+---
+
+## Delegated-task completion gate
+
+Before producing the final answer for a delegated task, confirm that:
+
+- every required subagent was actually spawned
+- every required subagent either completed or explicitly failed
+- material findings were integrated
+- conflicting findings were resolved
+- required verification was performed
+- no required agent is still running
+
+Do not finish while required subagents are still running.
+
+Do not claim delegation occurred unless `spawn_agent` was actually called successfully.
+
+---
+
+## Final verification
+
+Before claiming completion, the root should:
+
+1. inspect the final diff
+2. confirm the requested behavior is actually implemented
+3. check material reviewer findings
+4. run or confirm the highest-value tests
+5. verify that delegated results were integrated correctly
+6. state any validation that could not be performed
+
+For implementation tasks, prefer checking:
+
+- syntax or type checks
+- targeted unit tests
+- integration tests where relevant
+- build success where relevant
+- the original reproduction path
+- final diff for unintended changes
+
+---
+
+## User-facing behavior
+
+**Delegation visibility (always on):** For every delegated task, narrate in the
+conversation at spawn time, using this compact format:
+
+> 🤖 [委派] explorer ← GPT-6 Luna（medium）：扫描 <范围>，只读
+> 🤖 [委派] worker ← GPT-6 Luna（medium）：实现 <目标>，拥有 <文件>
+> 🤖 [委派] tester ← GPT-6 Luna（medium）：验证 <验收标准>
+> 🤖 [委派] reviewer ← Astra（low）：独立审查本次改动
+> ⬆️ [已升级] <任务名> → GPT-6 Sol high（用户已确认）  ← 仅当 root = GPT-6 Astra 时出现
+> ⬆️ [接管] <任务名> → root（GPT-6 Sol high）：<一句话原因>  ← 仅当 root = GPT-6 Sol 时出现
+
+And at completion:
+
+> ✅ [完成] <任务名>（GPT-6 Luna/Astra/GPT-6 Sol high）：<一句话结果>
+
+Every spawn must state the role and the exact model. Do not summarize away the
+model assignments. Do not claim a GPT-6 Luna agent was used unless the trace contains
+a successful `spawn_agent` call using `gpt-6-luna`.
+
+The final answer should focus on:
+
+- what changed
+- what was verified
+- important findings
+- remaining risks or limitations
+
+If the user explicitly asks to see delegation, report:
+
+- subagent name
+- model
+- assigned task
+- completion status
+
+Do not claim a GPT-6 Luna agent was used unless the trace contains a successful `spawn_agent` call using `gpt-6-luna`.
