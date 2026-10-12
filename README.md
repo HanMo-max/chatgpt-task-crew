@@ -77,18 +77,6 @@ scripts/check_bundle.py                  无第三方依赖的静态检查
 
 独立的简单任务直接在新会话选择 Luna。模板不会自动把正在运行的 Astra 会话切换成 Luna。
 
-## 已验证到哪一步
-
-截至 **2026-10-08**，本机存在项目级正式部署，并有 Luna 执行和 Astra 审查的真实记录。早期计算器验证里，主 Agent 实际是 Sol，两个子 Agent 实际是旧版本 Luna；不能把它写成完整 Astra 拓扑测试。
-
-五个角色文件与核对的现行部署逐字节一致；主配置补充主控选项说明，Skill 将旧 Sol 更新为 GPT-6.1 Sol。保留默认 6 个子线程、委派门槛及升级授权规则。源文件与发布文件校验值分别记录，见 [deployment-manifest.json](docs/deployment-manifest.json)。项目入口 `AGENTS.md` 仅提取分工规则，未复制私有业务治理文件。**源项目运行证据不等于其他目标客户端已完成安装验证。** 静态检查与来源比对范围见 [usage-review.md](docs/usage-review.md)。没有经过配对实验的成本或耗时下降比例。
-
-运行静态检查需要 Python 3.11 或更新版本：
-
-```bash
-python3 scripts/check_bundle.py
-```
-
 ## 官方资料
 
 - [子 Agent、模型选择与项目级角色文件](https://learn.chatgpt.com/docs/agent-configuration/subagents)
